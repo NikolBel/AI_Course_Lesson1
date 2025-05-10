@@ -20,8 +20,8 @@ var builder = Kernel.CreateBuilder().AddAzureOpenAIChatCompletion(modelName, end
 builder.Services.AddLogging(configure => configure.AddConsole());
 builder.Services.AddLogging(configure => configure.SetMinimumLevel(LogLevel.Information));
 
-//string pluginDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Plugins");
-//builder.Plugins.AddFromPromptDirectory(pluginDirectory);
+string pluginDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Plugins");
+builder.Plugins.AddFromPromptDirectory(pluginDirectory);
 //builder.Plugins.AddFromType<GitPlugin>();
 
 var kernel = builder.Build();
