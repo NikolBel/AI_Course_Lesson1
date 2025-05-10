@@ -22,7 +22,7 @@ builder.Services.AddLogging(configure => configure.SetMinimumLevel(LogLevel.Info
 
 string pluginDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Plugins");
 builder.Plugins.AddFromPromptDirectory(pluginDirectory);
-//builder.Plugins.AddFromType<GitPlugin>();
+builder.Plugins.AddFromType<GitPlugin>();
 
 var kernel = builder.Build();
 
