@@ -92,7 +92,6 @@ public sealed class GitPlugin
         }
         catch
         {
-            // если файл повреждён – начинаем с чистого состояния
             return new();
         }
     }
@@ -108,5 +107,9 @@ public sealed class GitPlugin
         File.WriteAllText(StateFilePath, json);
     }
 
-    private sealed record BotState { public string? LastRepo; public string? LatestVersion; }
+    private sealed record BotState
+    {
+        public string? LastRepo { get; set; }
+        public string? LatestVersion { get; set; }
+    }
 }

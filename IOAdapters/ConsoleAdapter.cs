@@ -15,6 +15,7 @@ public class ConsoleAdapter : IIoAdapter
         Console.Write("Me > ");
         Console.ResetColor();
 
+        Console.ForegroundColor = ConsoleColor.White;
         return Console.ReadLine() ?? string.Empty;
     }
 
