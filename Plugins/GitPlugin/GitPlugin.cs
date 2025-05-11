@@ -17,9 +17,7 @@ public sealed class GitPlugin
     public string SetRepository(
         [Description("Absolute path to git repository.")] string repoPath)
     {
-        if (string.IsNullOrWhiteSpace(repoPath) ||
-            !Directory.Exists(repoPath) ||
-            !Repository.IsValid(repoPath))
+        if (!IsValidRepo(repoPath))
             return $"❌ {repoPath} is not a git repository.";
 
         _repoPath = repoPath;
@@ -31,10 +29,11 @@ public sealed class GitPlugin
     public string GetCommits(
         [Description("Number of commits to retrieve.")] int nOfCommits = 5)
     {
-        if (string.IsNullOrWhiteSpace(_repoPath))
-            return "⚠️ No repository defined. Please run **SetRepository** first.";
+        var repoPath = ResolveRepoPath() ??
+                       "⚠️ No repository defined. Please run **SetRepository** first.";
+        if (repoPath.StartsWith('⚠')) return repoPath;
 
-        using var repo = new Repository(_repoPath);
+        using var repo = new Repository(repoPath);
         var commits = repo.Commits.Take(nOfCommits);
 
         var sb = new StringBuilder();
@@ -48,8 +47,9 @@ public sealed class GitPlugin
     public string BumpVersion(
         [Description("major / minor / patch")] string level = "patch")
     {
-        if (string.IsNullOrWhiteSpace(_repoPath))
-            return "No repo. Use SetRepository first.";
+        var repoPath = ResolveRepoPath() ??
+                       "No repo. Use SetRepository first.";
+        if (repoPath.StartsWith("No repo")) return repoPath;
 
         var state = LoadState();
         var current = Version.Parse(state.LatestVersion ?? "0.0.0");
@@ -60,20 +60,47 @@ public sealed class GitPlugin
             _ => new Version(current.Major, current.Minor, current.Build + 1)
         };
 
-        using var repo = new Repository(_repoPath);
-        Signature sig = new("release-bot", "bot@example.com", DateTimeOffset.Now);
-        repo.ApplyTag($"v{next}", sig, "Automated release tag");
+        using var repo = new Repository(repoPath);
+        var tagName = $"v{next}";
 
+        if (repo.Tags[tagName] is not null)
+            return $"⚠️ Tag {tagName} already exists.";
+
+        var sig = new Signature("release-bot", "bot@example.com", DateTimeOffset.Now);
+        repo.ApplyTag(tagName, sig, "Automated release tag");
+
+        // persist
         state.LatestVersion = next.ToString();
         WriteState(state);
 
-        return $"🎉 Tagged repository with v{next}";
+        return $"🎉 Tagged repository with {tagName}";
     }
 
     // ––––––––– helpers –––––––––
     private static readonly string StateFilePath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".sk-release-bot", "state.json");
+                     ".sk-release-bot", "state.json");
+
+    private string? ResolveRepoPath()
+    {
+        // 1) локальная переменная (последний SetRepository)
+        if (!string.IsNullOrWhiteSpace(_repoPath)) return _repoPath;
+
+        // 2) state.json
+        var last = LoadState().LastRepo;
+        if (!string.IsNullOrWhiteSpace(last) && IsValidRepo(last))
+        {
+            _repoPath = last;         // кэшируем для будущих вызовов
+            return last;
+        }
+
+        return null;
+    }
+
+    private static bool IsValidRepo(string path) =>
+        Directory.Exists(path) && Repository.IsValid(path);
+
+    /* ─── state helpers ─── */
 
     private static void SaveLastRepo(string path)
     {
@@ -85,6 +112,7 @@ public sealed class GitPlugin
     private static BotState LoadState()
     {
         if (!File.Exists(StateFilePath)) return new();
+
         try
         {
             var json = File.ReadAllText(StateFilePath);
@@ -101,8 +129,12 @@ public sealed class GitPlugin
         var dir = Path.GetDirectoryName(StateFilePath)!;
         Directory.CreateDirectory(dir);
 
-        var json = System.Text.Json.JsonSerializer.Serialize(state,
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            state,
+            new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
 
         File.WriteAllText(StateFilePath, json);
     }
