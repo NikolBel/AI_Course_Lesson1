@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.Data;
 using SemanticKernelPlayground.Services;
@@ -79,7 +77,7 @@ foreach (var plugin in kernel.Plugins)
     Console.WriteLine($" – {plugin.Name}");
 }
 
-// Ranning the chat bot
+// Running the chatbot
 var services = new ServiceCollection();
 services.AddSingleton(kernel);
 services.AddSingleton<IIoAdapter, ConsoleAdapter>();
